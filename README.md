@@ -19,7 +19,7 @@ URL to your server instance. Here's an example:
 ```
 {
   "Server": "https://mastodon.social/",
-  "ClientID": "client id from application config",
+  "ClientID": "client key from application config",
   "ClientSecret": "client secret from application config",
   "AccessToken": "access token from application config"
 }

@@ -18,9 +18,9 @@ import (
 //
 // {
 //   "Server": "https://mastodon.social/",
-//   "ClientID": "from the web ui",
-//   "ClientSecret": "from the web ui",
-//   "AccessToken": "from the web ui"
+//   "ClientID": "client key from application config",
+//   "ClientSecret": "client secret from application config",
+//   "AccessToken": "access token from application config"
 // }
 
 var (
