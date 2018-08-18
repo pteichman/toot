@@ -3,13 +3,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"log"
 	"strings"
-
-	"golang.org/x/net/context"
 
 	mastodon "github.com/mattn/go-mastodon"
 )

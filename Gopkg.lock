@@ -19,15 +19,9 @@
   revision = "6953a30d444317754766fccdd3f7f000edc874f6"
   version = "0.1.0"
 
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/net"
-  packages = ["context"]
-  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "11233321e9f703fa43d5928f08b14fd3be243147689b5e3e6ff0bffeb458ad77"
+  inputs-digest = "dd9be9fdd1fe04eac485cac807e5e538214e916e4799a6923140417b262a25f4"
   solver-name = "gps-cdcl"
   solver-version = 1
