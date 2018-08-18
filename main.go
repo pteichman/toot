@@ -55,16 +55,10 @@ func main() {
 	ctx := context.Background()
 
 	if media != nil && *media != "" {
-		//		buf, err := mastodon.Base64EncodeFileName(*media)
-		//		if err != nil {
-		//			log.Fatalf("Reading media: %s: %v", *media, err)
-		//		}
-
 		attachment, err := client.UploadMedia(ctx, *media)
 		if err != nil {
 			log.Fatalf("Uploading media: %v", err)
 		}
-
 		toot.MediaIDs = append(toot.MediaIDs, attachment.ID)
 	}
 
