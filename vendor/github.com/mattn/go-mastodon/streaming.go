@@ -2,52 +2,70 @@ package mastodon
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
-	"strconv"
 	"strings"
 )
 
-// UpdateEvent is struct for passing status event to app.
+// UpdateEvent is a struct for passing status event to app.
 type UpdateEvent struct {
 	Status *Status `json:"status"`
 }
 
 func (e *UpdateEvent) event() {}
 
-// NotificationEvent is struct for passing notification event to app.
+// NotificationEvent is a struct for passing notification event to app.
 type NotificationEvent struct {
 	Notification *Notification `json:"notification"`
 }
 
 func (e *NotificationEvent) event() {}
 
-// DeleteEvent is struct for passing deletion event to app.
-type DeleteEvent struct{ ID int64 }
+// DeleteEvent is a struct for passing deletion event to app.
+type DeleteEvent struct{ ID ID }
 
 func (e *DeleteEvent) event() {}
 
-// ErrorEvent is struct for passing errors to app.
+// ErrorEvent is a struct for passing errors to app.
 type ErrorEvent struct{ err error }
 
 func (e *ErrorEvent) event()        {}
 func (e *ErrorEvent) Error() string { return e.err.Error() }
 
-// Event is interface passing events to app.
+// Event is an interface passing events to app.
 type Event interface {
 	event()
 }
 
 func handleReader(q chan Event, r io.Reader) error {
 	var name string
-	s := bufio.NewScanner(r)
-	for s.Scan() {
-		line := s.Text()
-		token := strings.SplitN(line, ":", 2)
+	var lineBuf bytes.Buffer
+	br := bufio.NewReader(r)
+	for {
+		line, isPrefix, err := br.ReadLine()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+		if isPrefix {
+			lineBuf.Write(line)
+			continue
+		}
+		if lineBuf.Len() > 0 {
+			lineBuf.Write(line)
+			line = lineBuf.Bytes()
+			lineBuf.Reset()
+		}
+
+		token := strings.SplitN(string(line), ":", 2)
 		if len(token) != 2 {
 			continue
 		}
@@ -70,22 +88,17 @@ func handleReader(q chan Event, r io.Reader) error {
 					q <- &NotificationEvent{&notification}
 				}
 			case "delete":
-				var id int64
-				id, err = strconv.ParseInt(strings.TrimSpace(token[1]), 10, 64)
-				if err == nil {
-					q <- &DeleteEvent{id}
-				}
+				q <- &DeleteEvent{ID: ID(strings.TrimSpace(token[1]))}
 			}
 			if err != nil {
 				q <- &ErrorEvent{err}
 			}
 		}
 	}
-	return s.Err()
 }
 
 func (c *Client) streaming(ctx context.Context, p string, params url.Values) (chan Event, error) {
-	u, err := url.Parse(c.config.Server)
+	u, err := url.Parse(c.Config.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +110,10 @@ func (c *Client) streaming(ctx context.Context, p string, params url.Values) (ch
 		return nil, err
 	}
 	req = req.WithContext(ctx)
-	req.Header.Set("Authorization", "Bearer "+c.config.AccessToken)
+
+	if c.Config.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Config.AccessToken)
+	}
 
 	q := make(chan Event)
 	go func() {
@@ -134,12 +150,12 @@ func (c *Client) doStreaming(req *http.Request, q chan Event) {
 	}
 }
 
-// StreamingUser return channel to read events on home.
+// StreamingUser returns a channel to read events on home.
 func (c *Client) StreamingUser(ctx context.Context) (chan Event, error) {
 	return c.streaming(ctx, "user", nil)
 }
 
-// StreamingPublic return channel to read events on public.
+// StreamingPublic returns a channel to read events on public.
 func (c *Client) StreamingPublic(ctx context.Context, isLocal bool) (chan Event, error) {
 	p := "public"
 	if isLocal {
@@ -149,7 +165,7 @@ func (c *Client) StreamingPublic(ctx context.Context, isLocal bool) (chan Event,
 	return c.streaming(ctx, p, nil)
 }
 
-// StreamingHashtag return channel to read events on tagged timeline.
+// StreamingHashtag returns a channel to read events on tagged timeline.
 func (c *Client) StreamingHashtag(ctx context.Context, tag string, isLocal bool) (chan Event, error) {
 	params := url.Values{}
 	params.Set("tag", tag)
@@ -160,4 +176,17 @@ func (c *Client) StreamingHashtag(ctx context.Context, tag string, isLocal bool)
 	}
 
 	return c.streaming(ctx, p, params)
+}
+
+// StreamingList returns a channel to read events on a list.
+func (c *Client) StreamingList(ctx context.Context, id ID) (chan Event, error) {
+	params := url.Values{}
+	params.Set("list", string(id))
+
+	return c.streaming(ctx, "list", params)
+}
+
+// StreamingDirect returns a channel to read events on a direct messages.
+func (c *Client) StreamingDirect(ctx context.Context) (chan Event, error) {
+	return c.streaming(ctx, "direct", nil)
 }

@@ -2,18 +2,17 @@ package mastodon
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 )
 
-// Report hold information for mastodon report.
+// Report holds information for a mastodon report.
 type Report struct {
 	ID          int64 `json:"id"`
 	ActionTaken bool  `json:"action_taken"`
 }
 
-// GetReports return report of the current user.
+// GetReports returns report of the current user.
 func (c *Client) GetReports(ctx context.Context) ([]*Report, error) {
 	var reports []*Report
 	err := c.doAPI(ctx, http.MethodGet, "/api/v1/reports", nil, &reports, nil)
@@ -24,11 +23,11 @@ func (c *Client) GetReports(ctx context.Context) ([]*Report, error) {
 }
 
 // Report reports the report
-func (c *Client) Report(ctx context.Context, accountID int64, ids []int64, comment string) (*Report, error) {
+func (c *Client) Report(ctx context.Context, accountID ID, ids []ID, comment string) (*Report, error) {
 	params := url.Values{}
-	params.Set("account_id", fmt.Sprint(accountID))
+	params.Set("account_id", string(accountID))
 	for _, id := range ids {
-		params.Add("status_ids[]", fmt.Sprint(id))
+		params.Add("status_ids[]", string(id))
 	}
 	params.Set("comment", comment)
 	var report Report

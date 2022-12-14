@@ -4,9 +4,9 @@ Command line tool for posting to Mastodon; good for bots or cron
 # Setup
 
 First, install the tool. There are binaries on the GitHub releases
-page, or you can use go get:
+page, or you can use go install:
 
-    $ go get github.com/pteichman/toot
+    $ go install github.com/pteichman/toot@latest
 
 Create a new application in the Development section of your Mastodon
 configuration. Give it "write:statuses" and "write:media" permissions.

@@ -3,8 +3,10 @@ package mastodon
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -49,15 +51,20 @@ func (c *WSClient) StreamingWSHashtag(ctx context.Context, tag string, isLocal b
 	return c.streamingWS(ctx, s, tag)
 }
 
+// StreamingWSList return channel to read events on a list using WebSocket.
+func (c *WSClient) StreamingWSList(ctx context.Context, id ID) (chan Event, error) {
+	return c.streamingWS(ctx, "list", string(id))
+}
+
 func (c *WSClient) streamingWS(ctx context.Context, stream, tag string) (chan Event, error) {
 	params := url.Values{}
-	params.Set("access_token", c.client.config.AccessToken)
+	params.Set("access_token", c.client.Config.AccessToken)
 	params.Set("stream", stream)
 	if tag != "" {
 		params.Set("tag", tag)
 	}
 
-	u, err := changeWebSocketScheme(c.client.config.Server)
+	u, err := changeWebSocketScheme(c.client.Config.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +134,11 @@ func (c *WSClient) handleWS(ctx context.Context, rawurl string, q chan Event) er
 				q <- &NotificationEvent{Notification: &notification}
 			}
 		case "delete":
-			q <- &DeleteEvent{ID: int64(s.Payload.(float64))}
+			if f, ok := s.Payload.(float64); ok {
+				q <- &DeleteEvent{ID: ID(fmt.Sprint(int64(f)))}
+			} else {
+				q <- &DeleteEvent{ID: ID(strings.TrimSpace(s.Payload.(string)))}
+			}
 		}
 		if err != nil {
 			q <- &ErrorEvent{err}
